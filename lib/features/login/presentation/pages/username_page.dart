@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:plando/core/styles/constants.dart';
+import 'package:plando/core/widgets/auth_app_bar.dart';
 import 'package:plando/core/widgets/custom_button.dart';
 import 'package:plando/core/widgets/custom_text_field.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:go_router/go_router.dart';
+import 'package:plando/core/widgets/custom_snack_bar.dart';
 
 class UsernamePage extends StatefulWidget {
   final String email;
@@ -46,10 +50,33 @@ class _UsernamePageState extends State<UsernamePage> {
     });
   }
 
-  void _handleContinue() {
+  void _handleContinue() async {
     if (_isUsernameValid) {
-      print(
-          'Registering with username: ${_usernameController.text}, email: ${widget.email}, password: ${widget.password}');
+      try {
+        const storage = FlutterSecureStorage();
+
+        // Save user data
+        await storage.write(key: 'user_email', value: widget.email);
+        await storage.write(key: 'username', value: _usernameController.text);
+        await storage.write(key: 'is_authenticated', value: 'true');
+
+        if (mounted) {
+          CustomSnackBar.show(
+            context,
+            message: 'Registration successful!',
+            type: SnackBarType.success,
+          );
+          context.go('/home');
+        }
+      } catch (e) {
+        if (mounted) {
+          CustomSnackBar.show(
+            context,
+            message: 'Failed to save user data',
+            type: SnackBarType.error,
+          );
+        }
+      }
     }
   }
 
@@ -63,14 +90,7 @@ class _UsernamePageState extends State<UsernamePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
+      appBar: const AuthAppBar(),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppLength.body),

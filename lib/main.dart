@@ -1,57 +1,66 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// import 'core/api/firebase_setup.dart';
-// import 'core/utils/notification_utils.dart';
+import 'package:plando/core/api/firebase_setup.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'app.dart';
+import 'package:plando/app.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:plando/core/providers/auth/auth_state.dart';
-// import 'package:plando/features/auth/presentation/pages/auth_check_page.dart';
 import 'package:plando/core/services/analytics_service.dart';
+import 'package:plando/core/providers/auth/auth_state.dart';
 
-Future<void> main() async {
-  await dotenv.load();
+void main() async {
+  // Ensure Flutter bindings are initialized
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
-  // await initializeFirebase();
+  try {
+    // Load environment variables
+    await dotenv.load();
 
-  // Initialize Amplitude
+    // Initialize Firebase first
+    await initializeFirebase();
+
+    // Initialize other services
+    await Future.wait([
+      // Initialize Amplitude if API key is available
+      _initializeAmplitude(),
+      // Initialize date formatting
+      initializeDateFormatting('ru', null),
+    ]);
+
+    // Check if user has seen onboarding
+    final hasSeenOnboarding = await StorageService.hasSeenOnboarding();
+
+    // Run the app
+    runApp(
+      ProviderScope(
+        child: Consumer(
+          builder: (context, ref, child) {
+            // Initialize auth state
+            ref.read(authProvider.notifier).initializeAuth();
+
+            // If user hasn't seen onboarding, redirect to it
+            if (!hasSeenOnboarding) {
+              Future.microtask(() => StorageService.setHasSeenOnboarding());
+              return const MyApp(initialRoute: '/onboarding');
+            }
+
+            return const MyApp(initialRoute: '/');
+          },
+        ),
+      ),
+    );
+  } catch (e, stackTrace) {
+    print('Error during initialization: $e');
+    print('Stack trace: $stackTrace');
+    rethrow;
+  }
+}
+
+Future<void> _initializeAmplitude() async {
   final amplitudeApiKey = dotenv.env['AMPLITUDE_API_KEY'];
   if (amplitudeApiKey != null) {
     await AnalyticsService.init(amplitudeApiKey);
   }
-
-  // Request notification permissions
-  // await requestNotificationPermissions();
-
-  // Set up notification listeners
-  // setupNotificationListeners();
-
-  await initializeDateFormatting('ru', null);
-
-  // Check if user has seen onboarding
-  final hasSeenOnboarding = await StorageService.hasSeenOnboarding();
-
-  runApp(
-    ProviderScope(
-      child: Consumer(
-        builder: (context, ref, child) {
-          // Initialize auth state
-          ref.read(authProvider.notifier).initializeAuth();
-
-          // If user hasn't seen onboarding, redirect to it
-          if (!hasSeenOnboarding) {
-            Future.microtask(() => StorageService.setHasSeenOnboarding());
-            return const MyApp(initialRoute: '/onboarding');
-          }
-
-          return const MyApp(initialRoute: '/');
-        },
-      ),
-    ),
-  );
 }
 
 class StorageService {

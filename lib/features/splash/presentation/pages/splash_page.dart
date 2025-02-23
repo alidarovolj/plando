@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:plando/core/styles/constants.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -15,10 +16,16 @@ class _SplashPageState extends State<SplashPage>
   late Animation<double> _fadeInAnimation;
   late Animation<Offset> _circleSlideAnimation;
   late Animation<Offset> _textSlideAnimation;
+  final _storage = const FlutterSecureStorage();
 
   @override
   void initState() {
     super.initState();
+    _setupAnimations();
+    _checkAuthAndNavigate();
+  }
+
+  void _setupAnimations() {
     _controller = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
@@ -49,13 +56,24 @@ class _SplashPageState extends State<SplashPage>
     ));
 
     _controller.forward();
+  }
 
-    // Navigate to login page after 4 seconds
-    Future.delayed(const Duration(milliseconds: 4000), () {
-      if (mounted) {
-        context.go('/login');
-      }
-    });
+  Future<void> _checkAuthAndNavigate() async {
+    // Wait for animations
+    await Future.delayed(const Duration(milliseconds: 2000));
+
+    if (!mounted) return;
+
+    final isAuthenticated = await _storage.read(key: 'is_authenticated');
+    final userEmail = await _storage.read(key: 'user_email');
+
+    if (!mounted) return;
+
+    if (isAuthenticated == 'true' && userEmail != null) {
+      context.go('/home');
+    } else {
+      context.go('/login');
+    }
   }
 
   @override
@@ -92,17 +110,17 @@ class _SplashPageState extends State<SplashPage>
                       position: _textSlideAnimation,
                       child: FadeTransition(
                         opacity: _fadeInAnimation,
-                        child: Column(
+                        child: const Column(
                           children: [
-                            const Text(
+                            Text(
                               'Plando',
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            const Text(
+                            SizedBox(height: 4),
+                            Text(
                               'Create your own lists and\nshare them with your friends',
                               textAlign: TextAlign.center,
                               style: TextStyle(

@@ -21,6 +21,10 @@ class AppColors {
   static const Color primary = Color.fromRGBO(255, 103, 2, 1);
   static const Color secondary = Color.fromRGBO(133, 132, 153, 1);
   static const Color white = Color(0xFFFFFFFF);
+  static const Color disabled = Color(0xFF666666);
+  static const Color lightGrey = Color.fromRGBO(244, 244, 244, 1);
+  static const Color darkGrey = Color.fromRGBO(102, 102, 102, 1);
+  static const Color grey = Color.fromRGBO(217, 217, 217, 1);
 
   // Text colors
   static const Color textPrimary = Color.fromRGBO(41, 40, 76, 1);
@@ -30,7 +34,7 @@ class AppColors {
   static const Color borderColor = Color.fromRGBO(245, 245, 245, 1);
 
   // Background colors
-  static const Color backgroundLight = Color.fromRGBO(240, 242, 244, 1);
+  static const Color backgroundLight = Color(0xFFEBEBEB);
   static const Color backgroundDark = Color(0xFF212121);
   static const Color secondaryLight = Color.fromRGBO(237, 241, 247, 1);
   static const Color dividerColor = Color.fromRGBO(211, 217, 223, 1);

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:plando/core/styles/constants.dart';
+import 'package:plando/core/widgets/auth_app_bar.dart';
 import 'package:plando/core/widgets/custom_button.dart';
+import 'package:plando/core/widgets/custom_snack_bar.dart';
+import 'package:go_router/go_router.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class GuestPage extends StatelessWidget {
   const GuestPage({super.key});
@@ -10,14 +13,7 @@ class GuestPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
+      appBar: const AuthAppBar(),
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -44,41 +40,55 @@ class GuestPage extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 13,
-                    color: AppColors.textSecondary,
+                    color: AppColors.darkGrey,
                   ),
                 ),
                 const SizedBox(height: 48),
                 CustomButton(
                   label: 'Continue as a guest',
-                  onPressed: () => context.go('/'),
+                  onPressed: () async {
+                    try {
+                      const storage = FlutterSecureStorage();
+
+                      // Save mock guest user data
+                      await storage.write(
+                          key: 'user_email', value: 'guest@plando.app');
+                      await storage.write(key: 'username', value: 'Guest User');
+                      await storage.write(
+                          key: 'is_authenticated', value: 'true');
+                      await storage.write(key: 'is_guest', value: 'true');
+
+                      if (context.mounted) {
+                        CustomSnackBar.show(
+                          context,
+                          message: 'Welcome, Guest User!',
+                          type: SnackBarType.success,
+                        );
+                        context.go('/home');
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        CustomSnackBar.show(
+                          context,
+                          message: 'Failed to continue as guest',
+                          type: SnackBarType.error,
+                        );
+                      }
+                    }
+                  },
                   type: ButtonType.normal,
                   isFullWidth: true,
                   color: ButtonColor.black,
+                  style: CustomButtonStyle.filled,
                 ),
                 const SizedBox(height: AppLength.sm),
-                Container(
-                  width: double.infinity,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.black),
-                    borderRadius: BorderRadius.circular(100),
-                  ),
-                  child: TextButton(
-                    onPressed: () => context.go('/login'),
-                    style: TextButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(100),
-                      ),
-                    ),
-                    child: const Text(
-                      'Create an account',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
+                CustomButton(
+                  label: 'Create an account',
+                  onPressed: () => context.go('/login'),
+                  type: ButtonType.normal,
+                  isFullWidth: true,
+                  color: ButtonColor.black,
+                  style: CustomButtonStyle.outlined,
                 ),
               ],
             ),

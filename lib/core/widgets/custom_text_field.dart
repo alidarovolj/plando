@@ -9,7 +9,7 @@ enum TextFieldValidationType {
   none,
 }
 
-class CustomTextField extends StatelessWidget {
+class CustomTextField extends StatefulWidget {
   final TextEditingController controller;
   final String hintText;
   final String? errorText;
@@ -36,54 +36,156 @@ class CustomTextField extends StatelessWidget {
   });
 
   @override
+  State<CustomTextField> createState() => _CustomTextFieldState();
+}
+
+class _CustomTextFieldState extends State<CustomTextField> {
+  final _focusNode = FocusNode();
+  bool _isFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(() {
+      setState(() {
+        _isFocused = _focusNode.hasFocus;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (labelText != null) ...[
-          Text(
-            labelText!,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) {
+        if (_focusNode.hasFocus) {
+          _focusNode.unfocus();
+        }
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (widget.labelText != null) ...[
+            Text(
+              widget.labelText!,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
             ),
+            const SizedBox(height: AppLength.xs),
+          ],
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: widget.controller,
+            builder: (context, value, child) {
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                decoration: BoxDecoration(
+                  color: AppColors.lightGrey,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: widget.errorText != null
+                        ? Colors.red
+                        : (_isFocused ? Colors.black : Colors.transparent),
+                    width: 1,
+                  ),
+                ),
+                child: SizedBox(
+                  height: 50,
+                  child: Center(
+                    child: TextField(
+                      controller: widget.controller,
+                      obscureText: widget.obscureText,
+                      enabled: widget.enabled,
+                      focusNode: _focusNode,
+                      keyboardType: widget.keyboardType ?? _getKeyboardType(),
+                      onChanged: widget.onChanged,
+                      textAlignVertical: TextAlignVertical.center,
+                      style: const TextStyle(
+                        fontSize: 16,
+                      ),
+                      decoration: InputDecoration(
+                        isCollapsed: true,
+                        hintText: widget.hintText,
+                        hintStyle: const TextStyle(
+                          fontSize: 16,
+                          color: AppColors.darkGrey,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 0,
+                        ),
+                        suffixIcon: widget.enabled && value.text.isNotEmpty
+                            ? widget.suffix ??
+                                IconButton(
+                                  icon: Container(
+                                    width: 24,
+                                    height: 24,
+                                    decoration: const BoxDecoration(
+                                      color: AppColors.grey,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.close,
+                                      size: 16,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    widget.controller.clear();
+                                    widget.onChanged('');
+                                  },
+                                )
+                            : widget.suffix,
+                        filled: true,
+                        fillColor: Colors.transparent,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        focusedErrorBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
-          const SizedBox(height: AppLength.xs),
+          if (widget.errorText != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(
+                  Icons.close,
+                  size: 16,
+                  color: Colors.red,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  widget.errorText!,
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
-        TextField(
-          controller: controller,
-          obscureText: obscureText,
-          enabled: enabled,
-          keyboardType: keyboardType ?? _getKeyboardType(),
-          onChanged: onChanged,
-          decoration: InputDecoration(
-            hintText: hintText,
-            errorText: errorText,
-            suffixIcon: suffix,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.grey),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.grey),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.black),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.red),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
   TextInputType _getKeyboardType() {
-    switch (validationType) {
+    switch (widget.validationType) {
       case TextFieldValidationType.email:
         return TextInputType.emailAddress;
       case TextFieldValidationType.password:

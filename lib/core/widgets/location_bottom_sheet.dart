@@ -45,7 +45,7 @@ class LocationBottomSheet extends StatelessWidget {
             "Пушкина 32",
             style: TextStyle(
               fontSize: AppLength.body,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
             ),
           ),

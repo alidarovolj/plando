@@ -5,6 +5,8 @@ enum ButtonType { small, normal, big } // Типы кнопок
 
 enum ButtonColor { primary, black }
 
+enum CustomButtonStyle { filled, outlined, text }
+
 class CustomButton extends StatefulWidget {
   final String label; // Текст на кнопке
   final VoidCallback onPressed; // Действие при нажатии
@@ -13,6 +15,7 @@ class CustomButton extends StatefulWidget {
   final bool isFullWidth; // Растягивать ли кнопку на всю ширину
   final bool isLoading; // Add this line
   final ButtonColor color;
+  final CustomButtonStyle style;
 
   const CustomButton({
     super.key,
@@ -23,6 +26,7 @@ class CustomButton extends StatefulWidget {
     this.isFullWidth = true, // По умолчанию на всю ширину
     this.isLoading = false, // Add this line
     this.color = ButtonColor.primary,
+    this.style = CustomButtonStyle.filled,
   });
 
   @override
@@ -45,7 +49,6 @@ class _CustomButtonState extends State<CustomButton> {
         _textStyle = const TextStyle(
           fontSize: AppLength.xs,
           fontWeight: FontWeight.bold,
-          color: AppColors.white,
         );
         _padding = const EdgeInsets.symmetric(
             vertical: AppLength.tiny, horizontal: AppLength.xs);
@@ -54,7 +57,6 @@ class _CustomButtonState extends State<CustomButton> {
         _textStyle = const TextStyle(
           fontSize: AppLength.sm,
           fontWeight: FontWeight.w600,
-          color: AppColors.white,
         );
         _padding =
             const EdgeInsets.symmetric(horizontal: AppLength.body, vertical: 0);
@@ -63,7 +65,6 @@ class _CustomButtonState extends State<CustomButton> {
         _textStyle = const TextStyle(
           fontSize: AppLength.body,
           fontWeight: FontWeight.w700,
-          color: AppColors.white,
         );
         _padding = const EdgeInsets.symmetric(
             horizontal: AppLength.body, vertical: AppLength.xl);
@@ -75,6 +76,12 @@ class _CustomButtonState extends State<CustomButton> {
     if (!widget.isEnabled) {
       return AppColors.buttonDisabled;
     }
+
+    if (widget.style == CustomButtonStyle.outlined ||
+        widget.style == CustomButtonStyle.text) {
+      return Colors.transparent;
+    }
+
     switch (widget.color) {
       case ButtonColor.primary:
         return AppColors.primary;
@@ -83,20 +90,60 @@ class _CustomButtonState extends State<CustomButton> {
     }
   }
 
+  Color _getTextColor() {
+    if (!widget.isEnabled) {
+      return AppColors.textSecondary;
+    }
+
+    if (widget.style == CustomButtonStyle.filled) {
+      return AppColors.white;
+    }
+
+    switch (widget.color) {
+      case ButtonColor.primary:
+        return AppColors.primary;
+      case ButtonColor.black:
+        return Colors.black;
+    }
+  }
+
+  BoxDecoration _getButtonDecoration() {
+    final borderRadius = BorderRadius.circular(100);
+
+    if (widget.style == CustomButtonStyle.text) {
+      return BoxDecoration(
+        borderRadius: borderRadius,
+      );
+    }
+
+    final border = widget.style == CustomButtonStyle.outlined
+        ? Border.all(
+            color: widget.isEnabled
+                ? (widget.color == ButtonColor.black
+                    ? Colors.black
+                    : AppColors.primary)
+                : AppColors.buttonDisabled,
+          )
+        : null;
+
+    return BoxDecoration(
+      color: _getButtonColor(),
+      borderRadius: borderRadius,
+      border: border,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeInOut,
-      decoration: BoxDecoration(
-        color: _getButtonColor(),
-        borderRadius: BorderRadius.circular(100),
-      ),
-      child: GestureDetector(
-        onTap: widget.isEnabled ? widget.onPressed : null,
+    return GestureDetector(
+      onTap: widget.isEnabled ? widget.onPressed : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        decoration: _getButtonDecoration(),
         child: SizedBox(
           width: widget.isFullWidth ? double.infinity : null,
-          height: widget.type == ButtonType.normal ? 48 : null,
+          height: 60,
           child: Container(
             padding: _padding,
             child: Center(
@@ -108,7 +155,7 @@ class _CustomButtonState extends State<CustomButton> {
                         strokeWidth: 2,
                         valueColor: AlwaysStoppedAnimation<Color>(
                           widget.isEnabled
-                              ? AppColors.white
+                              ? _getTextColor()
                               : AppColors.textSecondary,
                         ),
                       ),
@@ -116,11 +163,13 @@ class _CustomButtonState extends State<CustomButton> {
                   : AnimatedDefaultTextStyle(
                       duration: const Duration(milliseconds: 200),
                       style: _textStyle.copyWith(
-                        color: widget.isEnabled
-                            ? AppColors.white
-                            : AppColors.textSecondary,
+                        color: _getTextColor(),
                       ),
-                      child: Text(widget.label),
+                      child: Text(widget.label,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          )),
                     ),
             ),
           ),

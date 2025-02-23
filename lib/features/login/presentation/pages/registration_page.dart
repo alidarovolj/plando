@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:plando/core/styles/constants.dart';
+import 'package:plando/core/widgets/auth_app_bar.dart';
 import 'package:plando/core/widgets/custom_button.dart';
 import 'package:plando/core/widgets/custom_text_field.dart';
-import 'package:plando/core/utils/validators.dart';
 
 class RegistrationPage extends StatefulWidget {
   final String email;
@@ -59,14 +59,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
+      appBar: const AuthAppBar(),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppLength.body),
@@ -179,7 +172,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                     'We recommend using uppercase, lowercase, numbers, and symbols for a stronger password',
                     style: TextStyle(
                       fontSize: 13,
-                      color: Colors.grey,
+                      color: AppColors.darkGrey,
                     ),
                   ),
                 ],

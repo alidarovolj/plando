@@ -6,8 +6,10 @@ import 'package:plando/core/widgets/custom_button.dart';
 import 'package:plando/core/widgets/custom_text_field.dart';
 import 'package:plando/core/styles/constants.dart';
 import 'package:plando/core/utils/validators.dart';
+import 'package:plando/core/widgets/custom_snack_bar.dart';
 import 'package:plando/features/login/presentation/providers/apple_auth_provider.dart';
 import 'package:plando/features/login/presentation/providers/google_auth_provider.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -18,6 +20,7 @@ class LoginPage extends ConsumerStatefulWidget {
 
 class _LoginPageState extends ConsumerState<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
+  final _storage = const FlutterSecureStorage();
   String? _emailError;
   bool _wasValidated = false;
 
@@ -36,36 +39,137 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     });
 
     if (_emailError == null) {
-      // Navigate to code input screen
-      context.push('/code', extra: _emailController.text);
+      // Check if this is a known user
+      if (_emailController.text.toLowerCase() == 'test@test.com') {
+        context.push('/known-login', extra: _emailController.text);
+      } else {
+        context.push('/code', extra: _emailController.text);
+      }
+    } else {
+      CustomSnackBar.show(
+        context,
+        message: _emailError!,
+        type: SnackBarType.error,
+      );
     }
   }
 
+  Future<void> _handleSuccessfulAuth(
+      String email, String provider, String? photoUrl) async {
+    try {
+      await _storage.write(key: 'user_email', value: email);
+      await _storage.write(key: 'auth_provider', value: provider);
+      await _storage.write(key: 'is_authenticated', value: 'true');
+      if (photoUrl != null) {
+        await _storage.write(key: 'user_photo', value: photoUrl);
+      }
+
+      if (mounted) {
+        CustomSnackBar.show(
+          context,
+          message: 'Successfully signed in with $provider',
+          type: SnackBarType.success,
+        );
+        context.go('/home');
+      }
+    } catch (e) {
+      if (mounted) {
+        CustomSnackBar.show(
+          context,
+          message: 'Failed to save authentication data',
+          type: SnackBarType.error,
+        );
+      }
+    }
+  }
+
+  void _handleAuthError(String provider, dynamic error) {
+    String errorMessage = 'Authentication failed';
+
+    if (error.toString().contains('canceled')) {
+      errorMessage = '$provider sign in was canceled';
+    } else if (error.toString().contains('network')) {
+      errorMessage = 'Network error occurred. Please check your connection';
+    } else if (error.toString().contains('PlatformException')) {
+      errorMessage = 'Configuration error. Please try again later';
+    }
+
+    CustomSnackBar.show(
+      context,
+      message: errorMessage,
+      type: SnackBarType.error,
+    );
+  }
+
   Widget _buildSocialButton(String iconPath, VoidCallback onPressed) {
-    return Container(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.black12),
-      ),
-      child: IconButton(
-        icon: Image.asset(
-          iconPath,
-          height: 24,
-          width: 24,
+    return SizedBox(
+      width: 70,
+      height: 70,
+      child: GestureDetector(
+        onTap: onPressed,
+        child: Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.black),
+          ),
+          child: Center(
+            child: SizedBox(
+              width: 34,
+              height: 34,
+              child: Image.asset(
+                iconPath,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
         ),
-        onPressed: onPressed,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(appleAuthProvider, (previous, next) {
+      next.whenOrNull(
+        data: (credential) {
+          if (credential != null) {
+            _handleSuccessfulAuth(
+              credential.email ?? 'No email provided',
+              'Apple',
+              null, // Apple не предоставляет фото
+            );
+          }
+        },
+        error: (error, stackTrace) {
+          _handleAuthError('Apple', error);
+        },
+      );
+    });
+
+    ref.listen(googleAuthProvider, (previous, next) {
+      next.whenOrNull(
+        data: (userData) {
+          if (userData != null) {
+            _handleSuccessfulAuth(
+              userData['email'] as String,
+              'Google',
+              userData['photoUrl'] as String?,
+            );
+          }
+        },
+        error: (error, stackTrace) {
+          _handleAuthError('Google', error);
+        },
+      );
+    });
+
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(backgroundColor: Colors.white, elevation: 0),
+      // appBar: const AuthAppBar(),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppLength.body),
+          padding: const EdgeInsets.only(
+              left: AppLength.body, right: AppLength.body, top: 60),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -78,7 +182,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               const Text(
                 'Sign in or create an account',
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 24,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -87,14 +191,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 'We\'ll send a verification code in email,\nWe\'ll use this email to sign you in or create an\naccount if you don\'t have one yet',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 13,
-                  color: AppColors.textSecondary,
+                  fontSize: 16,
+                  color: AppColors.darkGrey,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: AppLength.xl),
               CustomTextField(
                 controller: _emailController,
-                hintText: 'Email address',
+                hintText: 'Email',
                 labelText: 'Email',
                 errorText: _emailError,
                 validationType: TextFieldValidationType.email,
@@ -118,12 +223,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     () async {
                       final authNotifier = ref.read(appleAuthProvider.notifier);
                       await authNotifier.signInWithApple();
-                      final authState = ref.read(appleAuthProvider);
-                      authState.whenData((credential) {
-                        if (credential != null) {
-                          // Handle successful auth
-                        }
-                      });
                     },
                   ),
                   const SizedBox(width: AppLength.body),
@@ -133,17 +232,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       final authNotifier =
                           ref.read(googleAuthProvider.notifier);
                       await authNotifier.signInWithGoogle();
-                      final authState = ref.read(googleAuthProvider);
-                      authState.whenData((userData) {
-                        if (userData != null) {
-                          // Handle successful Google auth
-                          print('Signed in user: ${userData['email']}');
-                        }
-                      });
                     },
                   ),
                 ],
               ),
+              const SizedBox(height: AppLength.xxxl),
               TextButton(
                 onPressed: () {
                   context.push('/guest');
@@ -153,6 +246,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   style: TextStyle(
                     color: Colors.black,
                     fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    decoration: TextDecoration.underline,
                   ),
                 ),
               ),
@@ -162,7 +257,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 text: TextSpan(
                   style: const TextStyle(
                     fontSize: 14,
-                    color: AppColors.textSecondary,
+                    color: AppColors.darkGrey,
+                    fontWeight: FontWeight.w600,
                   ),
                   children: [
                     const TextSpan(
@@ -170,9 +266,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             'By proceeding, I confirm that I have read and agree to '),
                     TextSpan(
                       text: 'Terms & Privacy Policy',
-                      style: const TextStyle(
-                        decoration: TextDecoration.underline,
-                      ),
                       recognizer: TapGestureRecognizer()
                         ..onTap = () {
                           // Handle terms tap

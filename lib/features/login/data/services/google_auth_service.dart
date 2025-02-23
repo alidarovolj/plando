@@ -36,12 +36,13 @@ class GoogleAuthService {
           'accessToken': auth.accessToken,
           'idToken': auth.idToken,
         };
+      } else {
+        print('Sign in cancelled or failed');
+        throw Exception('Sign in was canceled');
       }
-      print('Sign in cancelled or failed');
-      return null;
     } catch (error) {
       print('Google Sign In Error: $error');
-      return null;
+      throw Exception(error.toString());
     }
   }
 
@@ -51,24 +52,30 @@ class GoogleAuthService {
       print('Successfully signed out');
     } catch (error) {
       print('Google Sign Out Error: $error');
+      throw Exception('Failed to sign out: $error');
     }
   }
 
   // Get current user if already signed in
   Future<Map<String, dynamic>?> getCurrentUser() async {
-    final GoogleSignInAccount? account = _googleSignIn.currentUser;
-    if (account != null) {
-      final GoogleSignInAuthentication auth = await account.authentication;
-      return {
-        'id': account.id,
-        'email': account.email,
-        'displayName': account.displayName,
-        'photoUrl': account.photoUrl,
-        'serverAuthCode': account.serverAuthCode,
-        'accessToken': auth.accessToken,
-        'idToken': auth.idToken,
-      };
+    try {
+      final GoogleSignInAccount? account = _googleSignIn.currentUser;
+      if (account != null) {
+        final GoogleSignInAuthentication auth = await account.authentication;
+        return {
+          'id': account.id,
+          'email': account.email,
+          'displayName': account.displayName,
+          'photoUrl': account.photoUrl,
+          'serverAuthCode': account.serverAuthCode,
+          'accessToken': auth.accessToken,
+          'idToken': auth.idToken,
+        };
+      }
+      return null;
+    } catch (error) {
+      print('Get Current User Error: $error');
+      throw Exception('Failed to get current user: $error');
     }
-    return null;
   }
 }

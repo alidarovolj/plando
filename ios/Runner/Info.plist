@@ -47,5 +47,28 @@
 	<array>
 		<string>Default</string>
 	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>We need access to your photo library to allow you to choose profile pictures and share images in your lists.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>We need your location to show you nearby lists and provide location-based features.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We need your location to show you nearby lists and provide location-based features while using the app.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>We need access to your camera to allow you to take photos for your profile and lists.</string>
+	<key>NSUserNotificationUsageDescription</key>
+	<string>We need to send you notifications to keep you updated about your lists and interactions.</string>
+	<key>GIDClientID</key>
+	<string>289697190381-n8qujlj3b9sv4vdqfnmrrl4bvg0hstja.apps.googleusercontent.com</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.289697190381-n8qujlj3b9sv4vdqfnmrrl4bvg0hstja</string>
+			</array>
+			<key>CFBundleURLName</key>
+			<string>google</string>
+		</dict>
+	</array>
 </dict>
 </plist>

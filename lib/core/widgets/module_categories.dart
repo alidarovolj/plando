@@ -86,7 +86,7 @@ class ModuleCategories extends StatelessWidget {
                           category.name,
                           style: const TextStyle(
                             fontSize: AppLength.xs,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: FontWeight.w600,
                             color: AppColors.textPrimary,
                           ),
                           textAlign: TextAlign.center,

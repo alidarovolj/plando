@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:plando/core/providers/auth/auth_state.dart';
-import 'package:plando/core/services/storage_service.dart';
 import 'package:plando/core/styles/constants.dart';
 import 'package:go_router/go_router.dart';
-import 'package:plando/core/providers/requests/auth/user.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
+
+import 'package:plando/core/widgets/auth_app_bar.dart';
 
 class CodeInputScreen extends StatefulWidget {
   final String email;
@@ -96,14 +94,7 @@ class _CodeInputScreenState extends State<CodeInputScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
+      appBar: const AuthAppBar(),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppLength.body),
@@ -124,7 +115,7 @@ class _CodeInputScreenState extends State<CodeInputScreen> {
                 text: TextSpan(
                   style: const TextStyle(
                     fontSize: 13,
-                    color: AppColors.textSecondary,
+                    color: AppColors.darkGrey,
                   ),
                   children: [
                     const TextSpan(
@@ -143,11 +134,11 @@ class _CodeInputScreenState extends State<CodeInputScreen> {
                 ),
               ),
               const SizedBox(height: AppLength.xs),
-              Text(
+              const Text(
                 'The code is valid for 5 minutes.',
                 style: TextStyle(
                   fontSize: 13,
-                  color: AppColors.textSecondary,
+                  color: AppColors.darkGrey,
                 ),
               ),
               const SizedBox(height: AppLength.xxl),
@@ -177,7 +168,7 @@ class _CodeInputScreenState extends State<CodeInputScreen> {
                               _codeDigits[index],
                               style: const TextStyle(
                                 fontSize: 28,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w600,
                                 color: Colors.black,
                               ),
                             ),
@@ -235,7 +226,7 @@ class _CodeInputScreenState extends State<CodeInputScreen> {
                           ? 'Code expired. Request a new one'
                           : 'Resend code',
                       style: TextStyle(
-                        color: _canResend ? Colors.black : Colors.grey,
+                        color: _canResend ? Colors.black : Colors.black,
                         fontSize: 13,
                       ),
                     ),
