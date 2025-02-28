@@ -7,10 +7,12 @@ import 'package:plando/core/widgets/custom_text_field.dart';
 
 class RegistrationPage extends StatefulWidget {
   final String email;
+  final String otpCode;
 
   const RegistrationPage({
     super.key,
     required this.email,
+    required this.otpCode,
   });
 
   @override
@@ -48,9 +50,14 @@ class _RegistrationPageState extends State<RegistrationPage> {
 
   void _handleSignUp() {
     if (_hasMinLength && _hasNumber && _hasSpecialChar) {
+      print('Passing OTP code to username page: ${widget.otpCode}');
+      print('OTP code type: ${widget.otpCode.runtimeType}');
+      print('OTP code length: ${widget.otpCode.length}');
+
       context.push('/username', extra: {
         'email': widget.email,
         'password': _passwordController.text,
+        'otpCode': widget.otpCode,
       });
     }
   }

@@ -3,30 +3,31 @@ import 'package:plando/core/styles/constants.dart';
 import 'package:plando/core/widgets/auth_app_bar.dart';
 import 'package:plando/core/widgets/custom_button.dart';
 import 'package:plando/core/widgets/custom_text_field.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:plando/core/widgets/custom_snack_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:plando/core/providers/requests/auth/user.dart';
 import 'dart:async';
 
-class UsernamePage extends ConsumerStatefulWidget {
+class GoogleUsernamePage extends ConsumerStatefulWidget {
   final String email;
-  final String password;
-  final String otpCode;
+  final String token;
+  final String? photoUrl;
+  final String? displayName;
 
-  const UsernamePage({
+  const GoogleUsernamePage({
     super.key,
     required this.email,
-    required this.password,
-    required this.otpCode,
+    required this.token,
+    this.photoUrl,
+    this.displayName,
   });
 
   @override
-  ConsumerState<UsernamePage> createState() => _UsernamePageState();
+  ConsumerState<GoogleUsernamePage> createState() => _GoogleUsernamePageState();
 }
 
-class _UsernamePageState extends ConsumerState<UsernamePage> {
+class _GoogleUsernamePageState extends ConsumerState<GoogleUsernamePage> {
   final TextEditingController _usernameController = TextEditingController();
   String? _usernameError;
   bool _isUsernameValid = false;
@@ -35,6 +36,23 @@ class _UsernamePageState extends ConsumerState<UsernamePage> {
   bool _isCheckingUsername = false;
   // Debounce timer for username validation
   Timer? _debounceTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // If display name is available, suggest it as username
+    if (widget.displayName != null && widget.displayName!.isNotEmpty) {
+      // Remove spaces and special characters to create a valid username
+      final suggestedUsername = widget.displayName!
+          .toLowerCase()
+          .replaceAll(RegExp(r'[^\w\s]+'), '')
+          .replaceAll(' ', '');
+
+      _usernameController.text = suggestedUsername;
+      // Validate the suggested username
+      _validateUsername(suggestedUsername);
+    }
+  }
 
   Future<void> _validateUsername(String value) async {
     // Cancel any previous debounce timer
@@ -115,18 +133,16 @@ class _UsernamePageState extends ConsumerState<UsernamePage> {
       final userService = ref.read(requestCodeProvider);
 
       // Print values for debugging
-      print('Registration parameters:');
+      print('Google Registration parameters:');
       print('Email: ${widget.email}');
-      print('Password: ${widget.password}');
+      print('Token: ${widget.token}');
       print('Username: ${_usernameController.text}');
-      print('OTP Code: ${widget.otpCode}');
 
-      // Register the user
-      final result = await userService.registerUser(
-        widget.email,
-        widget.password,
+      // Register the user with Google
+      final result = await userService.signUpWithGoogle(
+        widget.token,
         _usernameController.text,
-        widget.otpCode,
+        widget.email,
       );
 
       if (mounted) {

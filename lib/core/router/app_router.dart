@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:plando/features/home/presentation/pages/home_page.dart';
 import 'package:plando/features/login/presentation/pages/code_page.dart';
 import 'package:plando/features/login/presentation/pages/forgot_password_page.dart';
+import 'package:plando/features/login/presentation/pages/google_username_page.dart';
 import 'package:plando/features/login/presentation/pages/guest_page.dart';
 import 'package:plando/features/login/presentation/pages/known_login_page.dart';
 import 'package:plando/features/login/presentation/pages/login_page.dart';
@@ -30,6 +31,7 @@ class AppRouter {
         state.uri.path == '/guest' ||
         state.uri.path == '/code' ||
         state.uri.path == '/username' ||
+        state.uri.path == '/google-username' ||
         state.uri.path == '/known-login' ||
         state.uri.path == '/forgot-password' ||
         state.uri.path == '/registration') {
@@ -98,9 +100,22 @@ class AppRouter {
       ),
       GoRoute(
         path: '/registration',
-        builder: (context, state) => RegistrationPage(
-          email: state.extra as String,
-        ),
+        builder: (context, state) {
+          if (state.extra is Map) {
+            final Map<String, dynamic> params =
+                state.extra as Map<String, dynamic>;
+            return RegistrationPage(
+              email: params['email'] as String,
+              otpCode: params['otpCode'] as String,
+            );
+          } else {
+            // Fallback for backward compatibility
+            return RegistrationPage(
+              email: state.extra as String,
+              otpCode: '',
+            );
+          }
+        },
       ),
       GoRoute(
         path: '/username',
@@ -109,6 +124,7 @@ class AppRouter {
           return UsernamePage(
             email: params['email']!,
             password: params['password']!,
+            otpCode: params['otpCode']!,
           );
         },
       ),
@@ -132,6 +148,19 @@ class AppRouter {
         builder: (context, state) => ForgotPasswordPage(
           email: state.extra as String?,
         ),
+      ),
+      GoRoute(
+        path: '/google-username',
+        builder: (context, state) {
+          final Map<String, dynamic> params =
+              state.extra as Map<String, dynamic>;
+          return GoogleUsernamePage(
+            email: params['email'] as String,
+            token: params['token'] as String,
+            photoUrl: params['photoUrl'] as String?,
+            displayName: params['displayName'] as String?,
+          );
+        },
       ),
     ],
   );

@@ -7,8 +7,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:plando/core/widgets/custom_snack_bar.dart';
 import 'package:plando/core/utils/validators.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:plando/core/providers/requests/auth/user.dart';
 
-class KnownLoginPage extends StatefulWidget {
+class KnownLoginPage extends ConsumerStatefulWidget {
   final String email;
 
   const KnownLoginPage({
@@ -17,16 +19,18 @@ class KnownLoginPage extends StatefulWidget {
   });
 
   @override
-  State<KnownLoginPage> createState() => _KnownLoginPageState();
+  ConsumerState<KnownLoginPage> createState() => _KnownLoginPageState();
 }
 
-class _KnownLoginPageState extends State<KnownLoginPage> {
+class _KnownLoginPageState extends ConsumerState<KnownLoginPage> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _isPasswordValid = false;
   String? _emailError;
+  String? _passwordError;
   bool _wasValidated = false;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -38,6 +42,11 @@ class _KnownLoginPageState extends State<KnownLoginPage> {
   void _validatePassword() {
     setState(() {
       _isPasswordValid = _passwordController.text.isNotEmpty;
+      if (_wasValidated && !_isPasswordValid) {
+        _passwordError = 'Password is required';
+      } else {
+        _passwordError = null;
+      }
     });
   }
 
@@ -53,9 +62,16 @@ class _KnownLoginPageState extends State<KnownLoginPage> {
     setState(() {
       _wasValidated = true;
       _emailError = Validators.validateEmail(_emailController.text);
+      _passwordError =
+          _passwordController.text.isEmpty ? 'Password is required' : null;
+      _isLoading = true;
     });
 
     if (!_isPasswordValid || _emailError != null) {
+      setState(() {
+        _isLoading = false;
+      });
+
       if (_emailError != null) {
         CustomSnackBar.show(
           context,
@@ -67,26 +83,56 @@ class _KnownLoginPageState extends State<KnownLoginPage> {
     }
 
     try {
-      const storage = FlutterSecureStorage();
+      // Get the user service
+      final userService = ref.read(requestCodeProvider);
 
-      // Here you would typically validate the password against your backend
-      // For now, we'll just simulate a successful login
-      await storage.write(key: 'user_email', value: _emailController.text);
-      await storage.write(key: 'is_authenticated', value: 'true');
+      // Login with email and password
+      final result = await userService.login(
+        _emailController.text,
+        _passwordController.text,
+      );
 
       if (mounted) {
-        CustomSnackBar.show(
-          context,
-          message: 'Successfully signed in',
-          type: SnackBarType.success,
-        );
-        context.go('/home');
+        setState(() {
+          _isLoading = false;
+        });
+
+        if (result['success'] == true) {
+          // Show success message and navigate to home
+          CustomSnackBar.show(
+            context,
+            message: result['message'] ?? 'Successfully signed in',
+            type: SnackBarType.success,
+          );
+
+          // Navigate to home page
+          context.go('/home');
+        } else {
+          // Check if this is an authentication error
+          if (result['error_type'] == 'auth_error') {
+            // Display error under password field
+            setState(() {
+              _passwordError = result['message'];
+            });
+          } else {
+            // Show error message in snackbar
+            CustomSnackBar.show(
+              context,
+              message: result['message'] ?? 'Failed to sign in',
+              type: SnackBarType.error,
+            );
+          }
+        }
       }
     } catch (e) {
       if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+
         CustomSnackBar.show(
           context,
-          message: 'Failed to sign in',
+          message: 'Failed to sign in: ${e.toString()}',
           type: SnackBarType.error,
         );
       }
@@ -119,9 +165,9 @@ class _KnownLoginPageState extends State<KnownLoginPage> {
               ),
               const SizedBox(height: AppLength.xl),
               const Text(
-                'Welcome back',
+                'Welcome!',
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 24,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -141,6 +187,7 @@ class _KnownLoginPageState extends State<KnownLoginPage> {
                 validationType: TextFieldValidationType.password,
                 onChanged: (_) {},
                 labelText: 'Password',
+                errorText: _passwordError,
                 obscureText: !_isPasswordVisible,
                 suffix: IconButton(
                   icon: Icon(
@@ -175,17 +222,19 @@ class _KnownLoginPageState extends State<KnownLoginPage> {
                       color: Colors.black,
                       fontSize: 14,
                       decoration: TextDecoration.underline,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: AppLength.xl),
+              const SizedBox(height: 30),
               CustomButton(
-                label: 'Sign in',
-                onPressed: _handleSignIn,
+                label: _isLoading ? 'Signing in...' : 'Sign in',
+                onPressed: _isLoading ? () {} : _handleSignIn,
                 type: ButtonType.normal,
                 isFullWidth: true,
-                isEnabled: _isPasswordValid,
+                isEnabled: _isPasswordValid && !_isLoading,
+                isLoading: _isLoading,
                 color: ButtonColor.black,
               ),
             ],

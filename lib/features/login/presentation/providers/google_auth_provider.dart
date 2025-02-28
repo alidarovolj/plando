@@ -16,9 +16,11 @@ class GoogleAuthNotifier
       final userData = await _googleAuthService.signIn();
       state = AsyncValue.data(userData);
       if (userData != null) {
-        print('User Data: $userData');
+        print('Google User Data: $userData');
+        print('Access Token: ${userData['accessToken']}');
       }
     } catch (error, stackTrace) {
+      print('Google Sign In Error: $error');
       state = AsyncValue.error(error, stackTrace);
     }
   }
