@@ -242,15 +242,16 @@ class RequestCodeService {
     }
   }
 
-  Future<Map<String, dynamic>> verifyOtpCode(String email, String code) async {
+  Future<Map<String, dynamic>> verifyOtpCode(String email, String code,
+      {String type = "REGISTRATION"}) async {
     try {
       // Print the request payload for debugging
       print('OTP validation request payload:');
-      print({"email": email, "code": code, "type": "REGISTRATION"});
+      print({"email": email, "code": code, "type": type});
 
       final response = await _dio.post(
         '/v1/otp/validate',
-        data: {"email": email, "code": code, "type": "REGISTRATION"},
+        data: {"email": email, "code": code, "type": type},
       );
 
       print('OTP validation response: ${response.data}');
@@ -598,6 +599,255 @@ class RequestCodeService {
       return {'success': false, 'message': errorMessage};
     } catch (e) {
       print('General error with Google sign-up: $e');
+      return {'success': false, 'message': 'An unexpected error occurred'};
+    }
+  }
+
+  // Send password reset OTP
+  Future<Map<String, dynamic>> sendPasswordResetOtp(String email) async {
+    try {
+      final response = await _dio.post(
+        '/v1/otp/send',
+        data: {"email": email, "type": "FORGOT_PASSWORD"},
+      );
+
+      print('Send password reset OTP response: ${response.data}');
+      print('Send password reset OTP status code: ${response.statusCode}');
+
+      // If the response is successful
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Check if the response data indicates success
+        if (response.data != null && response.data is Map) {
+          // The API might return a success field or similar
+          return {
+            'success': response.data['success'] ?? true,
+            'message': response.data['message'] ??
+                'Password reset code sent successfully'
+          };
+        }
+        return {
+          'success': true,
+          'message': 'Password reset code sent successfully'
+        };
+      }
+      return {
+        'success': false,
+        'message': 'Failed to send password reset code'
+      };
+    } on DioException catch (e) {
+      print('Error sending password reset OTP: ${e.message}');
+      print('Error response: ${e.response?.data}');
+      print('Error status code: ${e.response?.statusCode}');
+
+      // Extract error message from response if available
+      String errorMessage = 'Failed to send password reset code';
+      if (e.response?.statusCode != null && e.response?.data != null) {
+        if (e.response!.data is Map) {
+          errorMessage = e.response!.data['message'] ?? errorMessage;
+        } else if (e.response!.data is String) {
+          errorMessage = e.response!.data;
+        }
+      }
+
+      return {'success': false, 'message': errorMessage};
+    } catch (e) {
+      print('General error sending password reset OTP: $e');
+      return {'success': false, 'message': 'An unexpected error occurred'};
+    }
+  }
+
+  // Reset password with OTP
+  Future<Map<String, dynamic>> resetPassword(
+      String email, String password, String otpCode) async {
+    try {
+      // Create the request payload
+      final Map<String, dynamic> payload = {
+        "email": email,
+        "password": password,
+        "otpCode": otpCode
+      };
+
+      // Print the request payload for debugging
+      print('Password reset request payload:');
+      print(payload);
+
+      final response = await _dio.post(
+        '/v1/users/forgot',
+        data: payload,
+      );
+
+      print('Password reset response: ${response.data}');
+      print('Password reset status code: ${response.statusCode}');
+
+      // If the response is successful
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Check if the response data indicates success
+        if (response.data != null && response.data is Map) {
+          // Save authentication tokens
+          await saveAuthTokens(response.data, email: email);
+
+          // Print confirmation of saved tokens
+          print('Authentication tokens saved after password reset');
+
+          // Return success response
+          return {
+            'success': true,
+            'message': 'Password reset successful',
+            'data': response.data
+          };
+        }
+        return {'success': true, 'message': 'Password reset successful'};
+      }
+      return {'success': false, 'message': 'Password reset failed'};
+    } on DioException catch (e) {
+      print('Error resetting password: ${e.message}');
+      print('Error response: ${e.response?.data}');
+      print('Error status code: ${e.response?.statusCode}');
+
+      // Extract error message from response if available
+      String errorMessage = 'Password reset failed';
+      if (e.response?.statusCode != null && e.response?.data != null) {
+        if (e.response!.data is Map) {
+          errorMessage = e.response!.data['message'] ?? errorMessage;
+        } else if (e.response!.data is String) {
+          errorMessage = e.response!.data;
+        }
+      }
+
+      return {'success': false, 'message': errorMessage};
+    } catch (e) {
+      print('General error resetting password: $e');
+      return {'success': false, 'message': 'An unexpected error occurred'};
+    }
+  }
+
+  // Apple Sign-In for existing users
+  Future<Map<String, dynamic>> signInWithApple(
+      String identityToken, String authorizationCode) async {
+    try {
+      print('Sending Apple sign-in request:');
+      print('Identity Token: $identityToken');
+      print('Authorization Code: $authorizationCode');
+
+      final response = await _dio.post(
+        '/v1/users/sign-in/google',
+        data: {
+          "token": identityToken,
+        },
+      );
+
+      print('Apple sign-in response: ${response.data}');
+      print('Apple sign-in status code: ${response.statusCode}');
+
+      // Log specific fields for debugging
+      if (response.data != null && response.data is Map) {
+        print('Access Token: ${response.data['accessToken']}');
+        print('Refresh Token: ${response.data['refreshToken']}');
+        print('Token Expiry: ${response.data['expiredAt']}');
+      }
+
+      // If the response is successful
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Check if the response data indicates success
+        if (response.data != null && response.data is Map) {
+          // Extract email from response if available
+          String? email = response.data['email'];
+
+          // Save authentication tokens
+          await saveAuthTokens(response.data, email: email);
+
+          // Return success response
+          return {
+            'success': true,
+            'message': 'Apple sign-in successful',
+            'data': response.data
+          };
+        }
+        return {'success': true, 'message': 'Apple sign-in successful'};
+      }
+      return {'success': false, 'message': 'Apple sign-in failed'};
+    } on DioException catch (e) {
+      print('Error with Apple sign-in: ${e.message}');
+      print('Error response: ${e.response?.data}');
+      print('Error status code: ${e.response?.statusCode}');
+
+      // Extract error message from response if available
+      String errorMessage = 'Apple sign-in failed';
+      if (e.response?.statusCode != null && e.response?.data != null) {
+        if (e.response!.data is Map) {
+          errorMessage = e.response!.data['message'] ?? errorMessage;
+        } else if (e.response!.data is String) {
+          errorMessage = e.response!.data;
+        }
+      }
+
+      return {'success': false, 'message': errorMessage};
+    } catch (e) {
+      print('General error with Apple sign-in: $e');
+      return {'success': false, 'message': 'An unexpected error occurred'};
+    }
+  }
+
+  // Apple Sign-Up for new users
+  Future<Map<String, dynamic>> signUpWithApple(String identityToken,
+      String authorizationCode, String username, String email) async {
+    try {
+      print('Sending Apple sign-up request:');
+      print('Identity Token: $identityToken');
+      print('Authorization Code: $authorizationCode');
+      print('Username: $username');
+      print('Email: $email');
+
+      final response = await _dio.post(
+        '/v1/users/sign-up/google',
+        data: {"token": identityToken, "username": username, "email": email},
+      );
+
+      print('Apple sign-up response: ${response.data}');
+      print('Apple sign-up status code: ${response.statusCode}');
+
+      // Log specific fields for debugging
+      if (response.data != null && response.data is Map) {
+        print('Access Token: ${response.data['accessToken']}');
+        print('Refresh Token: ${response.data['refreshToken']}');
+        print('Token Expiry: ${response.data['expiredAt']}');
+      }
+
+      // If the response is successful
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Check if the response data indicates success
+        if (response.data != null && response.data is Map) {
+          // Save authentication tokens
+          await saveAuthTokens(response.data, email: email, username: username);
+
+          // Return success response
+          return {
+            'success': true,
+            'message': 'Apple sign-up successful',
+            'data': response.data
+          };
+        }
+        return {'success': true, 'message': 'Apple sign-up successful'};
+      }
+      return {'success': false, 'message': 'Apple sign-up failed'};
+    } on DioException catch (e) {
+      print('Error with Apple sign-up: ${e.message}');
+      print('Error response: ${e.response?.data}');
+      print('Error status code: ${e.response?.statusCode}');
+
+      // Extract error message from response if available
+      String errorMessage = 'Apple sign-up failed';
+      if (e.response?.statusCode != null && e.response?.data != null) {
+        if (e.response!.data is Map) {
+          errorMessage = e.response!.data['message'] ?? errorMessage;
+        } else if (e.response!.data is String) {
+          errorMessage = e.response!.data;
+        }
+      }
+
+      return {'success': false, 'message': errorMessage};
+    } catch (e) {
+      print('General error with Apple sign-up: $e');
       return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }

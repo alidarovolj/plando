@@ -10,11 +10,14 @@ import 'package:plando/features/login/presentation/pages/guest_page.dart';
 import 'package:plando/features/login/presentation/pages/known_login_page.dart';
 import 'package:plando/features/login/presentation/pages/login_page.dart';
 import 'package:plando/features/login/presentation/pages/registration_page.dart';
+import 'package:plando/features/login/presentation/pages/reset_code_page.dart';
+import 'package:plando/features/login/presentation/pages/reset_password_page.dart';
 import 'package:plando/features/login/presentation/pages/username_page.dart';
 import 'package:plando/features/splash/presentation/pages/splash_page.dart';
 import 'package:plando/features/storybook/presentation/pages/storybook.dart';
 // import 'package:plando/core/widgets/main_tabbar_screen.dart';
 import 'package:plando/features/onboarding/presentation/pages/onboarding_page.dart';
+import 'package:plando/features/login/presentation/pages/apple_username_page.dart';
 
 class AppRouter {
   static const _storage = FlutterSecureStorage();
@@ -32,8 +35,11 @@ class AppRouter {
         state.uri.path == '/code' ||
         state.uri.path == '/username' ||
         state.uri.path == '/google-username' ||
+        state.uri.path == '/apple-username' ||
         state.uri.path == '/known-login' ||
         state.uri.path == '/forgot-password' ||
+        state.uri.path == '/reset-code' ||
+        state.uri.path == '/reset-password' ||
         state.uri.path == '/registration') {
       return null;
     }
@@ -99,6 +105,23 @@ class AppRouter {
         ),
       ),
       GoRoute(
+        path: '/reset-code',
+        builder: (context, state) => ResetCodeInputScreen(
+          email: state.extra as String,
+        ),
+      ),
+      GoRoute(
+        path: '/reset-password',
+        builder: (context, state) {
+          final Map<String, dynamic> params =
+              state.extra as Map<String, dynamic>;
+          return ResetPasswordPage(
+            email: params['email'] as String,
+            otpCode: params['otpCode'] as String,
+          );
+        },
+      ),
+      GoRoute(
         path: '/registration',
         builder: (context, state) {
           if (state.extra is Map) {
@@ -159,6 +182,20 @@ class AppRouter {
             token: params['token'] as String,
             photoUrl: params['photoUrl'] as String?,
             displayName: params['displayName'] as String?,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/apple-username',
+        builder: (context, state) {
+          final Map<String, dynamic> params =
+              state.extra as Map<String, dynamic>;
+          return AppleUsernamePage(
+            email: params['email'] as String,
+            identityToken: params['identityToken'] as String,
+            authorizationCode: params['authorizationCode'] as String,
+            firstName: params['firstName'] as String?,
+            lastName: params['lastName'] as String?,
           );
         },
       ),

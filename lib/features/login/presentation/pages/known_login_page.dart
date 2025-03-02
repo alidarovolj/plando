@@ -3,7 +3,6 @@ import 'package:plando/core/styles/constants.dart';
 import 'package:plando/core/widgets/auth_app_bar.dart';
 import 'package:plando/core/widgets/custom_button.dart';
 import 'package:plando/core/widgets/custom_text_field.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:plando/core/widgets/custom_snack_bar.dart';
 import 'package:plando/core/utils/validators.dart';

@@ -11,6 +11,12 @@ import 'package:plando/features/login/presentation/providers/apple_auth_provider
 import 'package:plando/features/login/presentation/providers/google_auth_provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:plando/core/providers/requests/auth/user.dart';
+import 'dart:io' show Platform;
+import 'package:plando/core/services/analytics_service.dart';
+import 'package:plando/core/constants/analytics_events.dart';
+import 'package:plando/core/constants/analytics_params.dart';
+import 'package:plando/core/constants/analytics_values.dart';
+import 'package:plando/core/services/analytics_tracker.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -25,6 +31,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   String? _emailError;
   bool _wasValidated = false;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Отслеживаем показ экрана входа/регистрации
+    AnalyticsTracker.trackAuthScreenView();
+  }
 
   void _validateEmail(String value) {
     if (_wasValidated) {
@@ -42,6 +55,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     });
 
     if (_emailError == null) {
+      // Отслеживаем выбор метода авторизации через email
+      AnalyticsTracker.trackAuthMethodSelected(AnalyticsValues.email);
+
       try {
         // Get the email verification service
         final userService = ref.read(requestCodeProvider);
@@ -56,12 +72,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               _isLoading = false;
             });
 
+            // Отслеживаем ввод email
+            AnalyticsTracker.trackEmailEntered(email, emailExists);
+
             // Navigate based on whether the email exists
             if (emailExists) {
               context.push('/known-login', extra: email);
             } else {
               // If email doesn't exist but no 404 was thrown, send OTP and navigate to code page
               final result = await userService.sendRegistrationOtp(email);
+
+              // Отслеживаем отправку OTP
+              AnalyticsTracker.trackRegistrationOtpSent(email);
+
               if (result['success'] == true) {
                 context.push('/code', extra: email);
               } else {
@@ -90,6 +113,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             setState(() {
               _isLoading = false;
             });
+
+            // Отслеживаем ввод email нового пользователя
+            AnalyticsTracker.trackEmailEntered(email, false);
+
+            // Отслеживаем отправку OTP
+            AnalyticsTracker.trackRegistrationOtpSent(email);
 
             if (result['success'] == true) {
               context.push('/code', extra: email);
@@ -163,6 +192,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   await _storage.write(key: 'user_photo', value: photoUrl);
                 }
 
+                // Отслеживаем успешный вход
+                AnalyticsTracker.trackLoginSuccess(
+                    email, provider.toLowerCase());
+
                 CustomSnackBar.show(
                   context,
                   message: 'Successfully signed in with $provider',
@@ -214,6 +247,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           await _storage.write(key: 'user_photo', value: photoUrl);
         }
 
+        // Отслеживаем успешный вход
+        AnalyticsTracker.trackLoginSuccess(email, provider.toLowerCase());
+
         if (mounted) {
           CustomSnackBar.show(
             context,
@@ -243,6 +279,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       errorMessage = 'Network error occurred. Please check your connection';
     } else if (error.toString().contains('PlatformException')) {
       errorMessage = 'Configuration error. Please try again later';
+    } else if (error.toString().contains('Email is required')) {
+      errorMessage =
+          'Email is required for authentication. Please ensure you share your email when signing in with Apple.';
     }
 
     CustomSnackBar.show(
@@ -282,13 +321,34 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     ref.listen(appleAuthProvider, (previous, next) {
       next.whenOrNull(
-        data: (credential) {
-          if (credential != null) {
-            _handleSuccessfulAuth(
-              credential.email ?? 'No email provided',
-              'Apple',
-              null, // Apple не предоставляет фото
-            );
+        data: (userData) {
+          if (userData != null) {
+            final email = userData['email'];
+            final identityToken = userData['identityToken'];
+
+            // Отслеживаем выбор метода авторизации через Apple
+            AnalyticsTracker.trackAuthMethodSelected(AnalyticsValues.apple);
+
+            // Проверяем наличие email
+            if (email == null || email.isEmpty) {
+              CustomSnackBar.show(
+                context,
+                message:
+                    'Email is required for authentication. Please ensure you share your email when signing in with Apple.',
+                type: SnackBarType.error,
+              );
+              return;
+            }
+
+            if (identityToken != null) {
+              _handleAppleAuth(email, identityToken);
+            } else {
+              CustomSnackBar.show(
+                context,
+                message: 'Missing required authentication token from Apple',
+                type: SnackBarType.error,
+              );
+            }
           }
         },
         error: (error, stackTrace) {
@@ -301,6 +361,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       next.whenOrNull(
         data: (userData) {
           if (userData != null) {
+            // Отслеживаем выбор метода авторизации через Google
+            AnalyticsTracker.trackAuthMethodSelected(AnalyticsValues.google);
+
             _handleSuccessfulAuth(
               userData['email'] as String,
               'Google',
@@ -372,30 +435,51 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 color: ButtonColor.black,
               ),
               const SizedBox(height: AppLength.xl),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildSocialButton(
-                    'lib/core/assets/images/logos/apple.png',
-                    () async {
-                      final authNotifier = ref.read(appleAuthProvider.notifier);
-                      await authNotifier.signInWithApple();
-                    },
-                  ),
-                  const SizedBox(width: AppLength.body),
-                  _buildSocialButton(
-                    'lib/core/assets/images/logos/google.png',
-                    () async {
-                      final authNotifier =
-                          ref.read(googleAuthProvider.notifier);
-                      await authNotifier.signInWithGoogle();
-                    },
-                  ),
-                ],
-              ),
+              // Используем разные подходы для разных платформ
+              Platform.isIOS
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildSocialButton(
+                          'lib/core/assets/images/logos/apple.png',
+                          () async {
+                            final authNotifier =
+                                ref.read(appleAuthProvider.notifier);
+                            await authNotifier.signInWithApple();
+                          },
+                        ),
+                        const SizedBox(width: AppLength.body),
+                        _buildSocialButton(
+                          'lib/core/assets/images/logos/google.png',
+                          () async {
+                            final authNotifier =
+                                ref.read(googleAuthProvider.notifier);
+                            await authNotifier.signInWithGoogle();
+                          },
+                        ),
+                      ],
+                    )
+                  : Center(
+                      // Для Android центрируем одну кнопку Google
+                      child: _buildSocialButton(
+                        'lib/core/assets/images/logos/google.png',
+                        () async {
+                          final authNotifier =
+                              ref.read(googleAuthProvider.notifier);
+                          await authNotifier.signInWithGoogle();
+                        },
+                      ),
+                    ),
               const SizedBox(height: AppLength.xxxl),
               TextButton(
                 onPressed: () {
+                  // Отслеживаем выбор метода авторизации через гостевой вход
+                  AnalyticsTracker.trackAuthMethodSelected(
+                      AnalyticsValues.guest);
+
+                  // Отслеживаем успешный гостевой вход
+                  AnalyticsTracker.trackGuestSuccess();
+
                   context.push('/guest');
                 },
                 child: const Text(
@@ -425,6 +509,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       text: 'Terms & Privacy Policy',
                       recognizer: TapGestureRecognizer()
                         ..onTap = () {
+                          // Отслеживаем просмотр Terms & Privacy Policy
+                          AnalyticsTracker.trackTermsPrivacyViewed();
+
                           // Handle terms tap
                         },
                     ),
@@ -443,5 +530,90 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   void dispose() {
     _emailController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleAppleAuth(String email, String identityToken) async {
+    // Проверяем наличие email
+    if (email == null || email.isEmpty || email == 'No email provided') {
+      CustomSnackBar.show(
+        context,
+        message:
+            'Email is required for authentication. Please ensure you share your email when signing in with Apple.',
+        type: SnackBarType.error,
+      );
+      return;
+    }
+
+    try {
+      // Get the user service
+      final userService = ref.read(requestCodeProvider);
+
+      try {
+        // Check if the email exists
+        final emailExists = await userService.checkEmailExists(email);
+
+        if (mounted) {
+          if (emailExists) {
+            // If email exists, sign in with Apple
+            final result = await userService.signInWithApple(identityToken, "");
+
+            if (result['success'] == true) {
+              // Save authentication data
+              await _storage.write(key: 'user_email', value: email);
+              await _storage.write(key: 'auth_provider', value: 'Apple');
+              await _storage.write(key: 'is_authenticated', value: 'true');
+
+              // Отслеживаем успешный вход
+              AnalyticsTracker.trackLoginSuccess(email, AnalyticsValues.apple);
+
+              CustomSnackBar.show(
+                context,
+                message: 'Successfully signed in with Apple',
+                type: SnackBarType.success,
+              );
+              context.go('/home');
+            } else {
+              CustomSnackBar.show(
+                context,
+                message: result['message'] ?? 'Failed to sign in with Apple',
+                type: SnackBarType.error,
+              );
+            }
+          } else {
+            // If email doesn't exist, redirect to username page for registration
+            context.push('/apple-username', extra: {
+              'email': email,
+              'identityToken': identityToken,
+              'authorizationCode': "",
+            });
+          }
+        }
+      } on EmailNotFoundException catch (_) {
+        // If email doesn't exist, redirect to username page for registration
+        if (mounted) {
+          context.push('/apple-username', extra: {
+            'email': email,
+            'identityToken': identityToken,
+            'authorizationCode': "",
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          CustomSnackBar.show(
+            context,
+            message: 'Failed to verify email: ${e.toString()}',
+            type: SnackBarType.error,
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        CustomSnackBar.show(
+          context,
+          message: 'Failed to process Apple authentication: ${e.toString()}',
+          type: SnackBarType.error,
+        );
+      }
+    }
   }
 }

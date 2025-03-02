@@ -7,6 +7,10 @@ import 'package:plando/app.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:plando/core/services/analytics_service.dart';
 import 'package:plando/core/providers/auth/auth_state.dart';
+import 'package:amplitude_flutter/amplitude.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:io' show Platform;
+import 'package:plando/core/services/device_info_service.dart';
 
 void main() async {
   // Ensure Flutter bindings are initialized
@@ -21,7 +25,7 @@ void main() async {
 
     // Initialize other services
     await Future.wait([
-      // Initialize Amplitude if API key is available
+      // Initialize Amplitude with API key
       _initializeAmplitude(),
       // Initialize date formatting
       initializeDateFormatting('ru', null),
@@ -57,9 +61,47 @@ void main() async {
 }
 
 Future<void> _initializeAmplitude() async {
-  final amplitudeApiKey = dotenv.env['AMPLITUDE_API_KEY'];
-  if (amplitudeApiKey != null) {
+  try {
+    // Используем предоставленный ключ API Amplitude
+    const amplitudeApiKey = '5fcdaba4df8a3325295b865cbf1441a2';
     await AnalyticsService.init(amplitudeApiKey);
+
+    // Включаем автоматический сбор данных о сессии
+    final Amplitude amplitude = Amplitude.getInstance();
+    await amplitude.trackingSessionEvents(true);
+
+    // Включаем отслеживание дополнительных автоматических параметров
+    await amplitude.enableCoppaControl();
+    // Используем динамическую конфигурацию
+    await amplitude.setUseDynamicConfig(true);
+
+    // Получаем информацию об устройстве с помощью нашего сервиса
+    final deviceInfo = await DeviceInfoService.getDeviceInfo();
+
+    // Устанавливаем свойства пользователя
+    await AnalyticsService.setUserProperties(deviceInfo);
+
+    // Логируем событие запуска приложения с информацией об устройстве и местоположении
+    await AnalyticsService.logEvent('app_started', properties: deviceInfo);
+
+    // Логируем дополнительную информацию о местоположении, если она доступна
+    if (deviceInfo.containsKey('latitude') &&
+        deviceInfo.containsKey('longitude')) {
+      debugPrint(
+          'Location data collected: Lat: ${deviceInfo['latitude']}, Lng: ${deviceInfo['longitude']}');
+
+      // Можно также отправить отдельное событие о местоположении
+      await AnalyticsService.logEvent('location_detected', properties: {
+        'latitude': deviceInfo['latitude'],
+        'longitude': deviceInfo['longitude'],
+        'accuracy': deviceInfo['location_accuracy'],
+      });
+    }
+
+    debugPrint('Amplitude initialized with API key: $amplitudeApiKey');
+    debugPrint('Device info collected: $deviceInfo');
+  } catch (e) {
+    debugPrint('Error initializing Amplitude: $e');
   }
 }
 

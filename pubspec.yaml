@@ -46,6 +46,10 @@ dependencies:
   email_validator: ^2.1.17
   google_sign_in: ^6.2.1
   shimmer: ^3.0.0
+  device_info_plus: ^11.3.0
+  carrier_info: ^2.0.8
+  package_info_plus: ^8.3.0
+  geocoding: ^3.0.0
 
 dev_dependencies:
   flutter_test:
