@@ -23,6 +23,7 @@ class CodeInputScreen extends ConsumerStatefulWidget {
 
 class _CodeInputScreenState extends ConsumerState<CodeInputScreen> {
   final TextEditingController _codeController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
   List<String> _codeDigits = ['', '', '', ''];
   bool _isExpired = false;
   Timer? _timer;
@@ -36,12 +37,15 @@ class _CodeInputScreenState extends ConsumerState<CodeInputScreen> {
   void initState() {
     super.initState();
     _startTimer();
+    // Отключаем фокус при инициализации
+    _focusNode.unfocus();
   }
 
   @override
   void dispose() {
     _timer?.cancel();
     _codeController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -70,10 +74,14 @@ class _CodeInputScreenState extends ConsumerState<CodeInputScreen> {
     });
   }
 
-  String _formatTimeLeft() {
+  String _formatMinutes() {
     final minutes = (_timeLeft / 60).floor();
+    return minutes.toString().padLeft(2, '0');
+  }
+
+  String _formatSeconds() {
     final seconds = _timeLeft % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    return seconds.toString().padLeft(2, '0');
   }
 
   Future<void> _resendCode() async {
@@ -257,13 +265,13 @@ class _CodeInputScreenState extends ConsumerState<CodeInputScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const AuthAppBar(),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppLength.body),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              const AuthAppBar(),
               const SizedBox(height: 60),
               const Text(
                 'Enter verification code',
@@ -359,9 +367,11 @@ class _CodeInputScreenState extends ConsumerState<CodeInputScreen> {
                   Positioned.fill(
                     child: TextField(
                       controller: _codeController,
+                      focusNode: _focusNode,
                       keyboardType: TextInputType.number,
                       autofillHints: const [AutofillHints.oneTimeCode],
                       maxLength: 4,
+                      showCursor: false,
                       style: const TextStyle(
                         color: Colors.transparent,
                         fontSize: 1,
@@ -374,7 +384,16 @@ class _CodeInputScreenState extends ConsumerState<CodeInputScreen> {
                         counterText: '',
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.zero,
+                        focusedBorder: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
                       ),
+                      autofocus: false,
+                      onTap: () {
+                        // Предотвращаем появление курсора при тапе
+                        _focusNode.unfocus();
+                      },
                       onChanged: (value) {
                         setState(() {
                           _codeDigits = List.filled(4, '');
@@ -425,12 +444,31 @@ class _CodeInputScreenState extends ConsumerState<CodeInputScreen> {
                       ),
                     ),
                   ),
-                  Text(
-                    _formatTimeLeft(),
-                    style: TextStyle(
-                      color: _timeLeft == 0 ? Colors.red : Colors.black,
-                      fontSize: 14,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _formatMinutes(),
+                        style: TextStyle(
+                          color: _timeLeft == 0 ? Colors.red : Colors.black,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const Text(
+                        ':',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        _formatSeconds(),
+                        style: TextStyle(
+                          color: _timeLeft == 0 ? Colors.red : Colors.black,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

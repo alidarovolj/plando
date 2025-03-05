@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:plando/core/widgets/custom_button.dart';
 import 'package:plando/core/widgets/custom_text_field.dart';
@@ -306,7 +307,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             child: SizedBox(
               width: 34,
               height: 34,
-              child: Image.asset(
+              child: SvgPicture.asset(
                 iconPath,
                 fit: BoxFit.contain,
               ),
@@ -325,23 +326,23 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           if (userData != null) {
             final email = userData['email'];
             final identityToken = userData['identityToken'];
+            final userIdentifier = userData['userIdentifier'];
 
             // Отслеживаем выбор метода авторизации через Apple
             AnalyticsTracker.trackAuthMethodSelected(AnalyticsValues.apple);
 
-            // Проверяем наличие email
-            if (email == null || email.isEmpty) {
+            // Проверяем наличие userIdentifier
+            if (userIdentifier == null || userIdentifier.isEmpty) {
               CustomSnackBar.show(
                 context,
-                message:
-                    'Email is required for authentication. Please ensure you share your email when signing in with Apple.',
+                message: 'Failed to get user identifier from Apple',
                 type: SnackBarType.error,
               );
               return;
             }
 
             if (identityToken != null) {
-              _handleAppleAuth(email, identityToken);
+              _handleAppleAuth(email, identityToken, userIdentifier);
             } else {
               CustomSnackBar.show(
                 context,
@@ -380,7 +381,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      // appBar: const AuthAppBar(),
+      //
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.only(
@@ -441,7 +442,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         _buildSocialButton(
-                          'lib/core/assets/images/logos/apple.png',
+                          'lib/core/assets/icons/apple.svg',
                           () async {
                             final authNotifier =
                                 ref.read(appleAuthProvider.notifier);
@@ -450,7 +451,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         ),
                         const SizedBox(width: AppLength.body),
                         _buildSocialButton(
-                          'lib/core/assets/images/logos/google.png',
+                          'lib/core/assets/icons/google.svg',
                           () async {
                             final authNotifier =
                                 ref.read(googleAuthProvider.notifier);
@@ -462,7 +463,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   : Center(
                       // Для Android центрируем одну кнопку Google
                       child: _buildSocialButton(
-                        'lib/core/assets/images/logos/google.png',
+                        'lib/core/assets/icons/google.svg',
                         () async {
                           final authNotifier =
                               ref.read(googleAuthProvider.notifier);
@@ -532,78 +533,67 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     super.dispose();
   }
 
-  Future<void> _handleAppleAuth(String email, String identityToken) async {
-    // Проверяем наличие email
-    if (email == null || email.isEmpty || email == 'No email provided') {
-      CustomSnackBar.show(
-        context,
-        message:
-            'Email is required for authentication. Please ensure you share your email when signing in with Apple.',
-        type: SnackBarType.error,
-      );
-      return;
-    }
-
+  Future<void> _handleAppleAuth(
+      String email, String identityToken, String userIdentifier) async {
     try {
       // Get the user service
       final userService = ref.read(requestCodeProvider);
 
       try {
-        // Check if the email exists
-        final emailExists = await userService.checkEmailExists(email);
+        // Check if the user exists by userIdentifier
+        final result =
+            await userService.signInWithApple(identityToken, userIdentifier);
 
-        if (mounted) {
-          if (emailExists) {
-            // If email exists, sign in with Apple
-            final result = await userService.signInWithApple(identityToken, "");
+        if (result['success'] == true) {
+          // Save authentication data
+          if (email.isNotEmpty) {
+            await _storage.write(key: 'user_email', value: email);
+          }
+          await _storage.write(key: 'auth_provider', value: 'Apple');
+          await _storage.write(key: 'is_authenticated', value: 'true');
+          await _storage.write(key: 'user_identifier', value: userIdentifier);
 
-            if (result['success'] == true) {
-              // Save authentication data
-              await _storage.write(key: 'user_email', value: email);
-              await _storage.write(key: 'auth_provider', value: 'Apple');
-              await _storage.write(key: 'is_authenticated', value: 'true');
+          // Отслеживаем успешный вход
+          AnalyticsTracker.trackLoginSuccess(
+              email.isNotEmpty ? email : userIdentifier, AnalyticsValues.apple);
 
-              // Отслеживаем успешный вход
-              AnalyticsTracker.trackLoginSuccess(email, AnalyticsValues.apple);
-
-              CustomSnackBar.show(
-                context,
-                message: 'Successfully signed in with Apple',
-                type: SnackBarType.success,
-              );
-              context.go('/home');
-            } else {
-              CustomSnackBar.show(
-                context,
-                message: result['message'] ?? 'Failed to sign in with Apple',
-                type: SnackBarType.error,
-              );
-            }
-          } else {
-            // If email doesn't exist, redirect to username page for registration
+          CustomSnackBar.show(
+            context,
+            message: 'Successfully signed in with Apple',
+            type: SnackBarType.success,
+          );
+          context.go('/home');
+        } else {
+          // If user doesn't exist, redirect to username page for registration
+          if (result['message']?.contains('User not found') == true) {
             context.push('/apple-username', extra: {
               'email': email,
               'identityToken': identityToken,
-              'authorizationCode': "",
+              'userIdentifier': userIdentifier,
             });
+          } else {
+            CustomSnackBar.show(
+              context,
+              message: result['message'] ?? 'Failed to sign in with Apple',
+              type: SnackBarType.error,
+            );
           }
-        }
-      } on EmailNotFoundException catch (_) {
-        // If email doesn't exist, redirect to username page for registration
-        if (mounted) {
-          context.push('/apple-username', extra: {
-            'email': email,
-            'identityToken': identityToken,
-            'authorizationCode': "",
-          });
         }
       } catch (e) {
         if (mounted) {
-          CustomSnackBar.show(
-            context,
-            message: 'Failed to verify email: ${e.toString()}',
-            type: SnackBarType.error,
-          );
+          if (e.toString().contains('User not found')) {
+            context.push('/apple-username', extra: {
+              'email': email,
+              'identityToken': identityToken,
+              'userIdentifier': userIdentifier,
+            });
+          } else {
+            CustomSnackBar.show(
+              context,
+              message: 'Failed to verify user: ${e.toString()}',
+              type: SnackBarType.error,
+            );
+          }
         }
       }
     } catch (e) {

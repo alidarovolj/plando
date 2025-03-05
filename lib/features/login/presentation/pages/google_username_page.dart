@@ -194,13 +194,13 @@ class _GoogleUsernamePageState extends ConsumerState<GoogleUsernamePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const AuthAppBar(),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppLength.body),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const AuthAppBar(),
               const SizedBox(height: 60),
               const Center(
                 child: Text(

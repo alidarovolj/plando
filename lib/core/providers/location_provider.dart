@@ -123,7 +123,7 @@ class LocationNotifier extends StateNotifier<LocationState> {
           'accuracy': position.accuracy,
           'altitude': position.altitude,
           'speed': position.speed,
-          'timestamp': position.timestamp?.millisecondsSinceEpoch,
+          'timestamp': position.timestamp.millisecondsSinceEpoch,
         };
 
         // Обновляем свойства пользователя в Amplitude

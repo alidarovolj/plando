@@ -256,13 +256,13 @@ class _ResetCodeInputScreenState extends ConsumerState<ResetCodeInputScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const AuthAppBar(),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppLength.body),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              const AuthAppBar(),
               const SizedBox(height: 60),
               const Text(
                 'Enter verification code',
@@ -360,6 +360,7 @@ class _ResetCodeInputScreenState extends ConsumerState<ResetCodeInputScreen> {
                       keyboardType: TextInputType.number,
                       autofillHints: const [AutofillHints.oneTimeCode],
                       maxLength: 4,
+                      showCursor: false,
                       style: const TextStyle(
                         color: Colors.transparent,
                         fontSize: 1,
@@ -371,6 +372,10 @@ class _ResetCodeInputScreenState extends ConsumerState<ResetCodeInputScreen> {
                       decoration: const InputDecoration(
                         counterText: '',
                         border: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
                         contentPadding: EdgeInsets.zero,
                       ),
                       onChanged: (value) {

@@ -6,19 +6,25 @@ class AuthAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppBar(
-      backgroundColor: Colors.white,
-      elevation: 0,
-      leading: Navigator.canPop(context)
-          ? Padding(
-              padding: const EdgeInsets.all(8.0),
+    return Container(
+      color: Colors.white,
+      height: kToolbarHeight,
+      child: Navigator.canPop(context)
+          ? Align(
+              alignment: Alignment.centerLeft,
               child: Container(
+                width: 50,
+                height: 50,
                 decoration: const BoxDecoration(
                   color: AppColors.lightGrey,
                   shape: BoxShape.circle,
                 ),
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.black),
+                  icon: const Icon(
+                    Icons.arrow_back,
+                    color: Colors.black,
+                    size: 24,
+                  ),
                   padding: EdgeInsets.zero,
                   onPressed: () => Navigator.pop(context),
                 ),

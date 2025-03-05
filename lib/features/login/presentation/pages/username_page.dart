@@ -3,7 +3,6 @@ import 'package:plando/core/styles/constants.dart';
 import 'package:plando/core/widgets/auth_app_bar.dart';
 import 'package:plando/core/widgets/custom_button.dart';
 import 'package:plando/core/widgets/custom_text_field.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:plando/core/widgets/custom_snack_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -178,13 +177,13 @@ class _UsernamePageState extends ConsumerState<UsernamePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const AuthAppBar(),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppLength.body),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const AuthAppBar(),
               const SizedBox(height: 60),
               const Center(
                 child: Text(

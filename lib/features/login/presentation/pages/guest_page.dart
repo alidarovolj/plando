@@ -13,12 +13,12 @@ class GuestPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const AuthAppBar(),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppLength.body),
           child: Column(
             children: [
+              const AuthAppBar(),
               const SizedBox(height: 60),
               const CircleAvatar(
                 radius: 30,

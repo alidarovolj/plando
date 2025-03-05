@@ -7,6 +7,7 @@ import 'package:plando/core/widgets/custom_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:plando/core/providers/requests/auth/user.dart';
 import 'package:plando/core/widgets/custom_snack_bar.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class ResetPasswordPage extends ConsumerStatefulWidget {
   final String email;
@@ -28,8 +29,6 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
   bool _hasMinLength = false;
-  bool _hasNumber = false;
-  bool _hasSpecialChar = false;
   bool _passwordsMatch = false;
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
@@ -39,8 +38,6 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
   void initState() {
     super.initState();
     _emailController.text = widget.email;
-    _passwordController.addListener(_validatePassword);
-    _confirmPasswordController.addListener(_validatePassword);
   }
 
   @override
@@ -51,20 +48,22 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
     super.dispose();
   }
 
-  void _validatePassword() {
-    final password = _passwordController.text;
-    final confirmPassword = _confirmPasswordController.text;
-
+  void _validatePassword(String value) {
     setState(() {
-      _hasMinLength = password.length >= 8;
-      _hasNumber = RegExp(r'[0-9]').hasMatch(password);
-      _hasSpecialChar = RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password);
-      _passwordsMatch = password == confirmPassword && password.isNotEmpty;
+      _hasMinLength = value.length >= 8;
+      _passwordsMatch =
+          value == _confirmPasswordController.text && value.isNotEmpty;
+    });
+  }
+
+  void _validateConfirmPassword(String value) {
+    setState(() {
+      _passwordsMatch = value == _passwordController.text && value.isNotEmpty;
     });
   }
 
   Future<void> _handleResetPassword() async {
-    if (_hasMinLength && _hasNumber && _hasSpecialChar && _passwordsMatch) {
+    if (_hasMinLength && _passwordsMatch) {
       setState(() {
         _isLoading = true;
       });
@@ -125,7 +124,6 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const AuthAppBar(),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
@@ -133,6 +131,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                const AuthAppBar(),
                 const SizedBox(height: AppLength.xl),
                 const CircleAvatar(
                   radius: 30,
@@ -149,8 +148,8 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                 const SizedBox(height: 50),
                 CustomTextField(
                   controller: _emailController,
-                  hintText: 'Email address',
-                  labelText: 'Email address',
+                  hintText: 'Email',
+                  labelText: 'Email',
                   validationType: TextFieldValidationType.email,
                   onChanged: (_) {},
                   enabled: false,
@@ -161,14 +160,15 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                   hintText: 'New Password',
                   labelText: 'New Password',
                   validationType: TextFieldValidationType.password,
-                  onChanged: (_) => _validatePassword(),
+                  onChanged: _validatePassword,
                   obscureText: !_isPasswordVisible,
                   suffix: IconButton(
-                    icon: Icon(
-                      _isPasswordVisible
-                          ? Icons.visibility
-                          : Icons.visibility_off,
-                      color: Colors.black,
+                    icon: SvgPicture.asset(
+                      'lib/core/assets/icons/eye.svg',
+                      colorFilter: ColorFilter.mode(
+                        _isPasswordVisible ? AppColors.darkGrey : Colors.black,
+                        BlendMode.srcIn,
+                      ),
                     ),
                     onPressed: () {
                       setState(() {
@@ -183,14 +183,17 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                   hintText: 'Confirm Password',
                   labelText: 'Confirm Password',
                   validationType: TextFieldValidationType.password,
-                  onChanged: (_) => _validatePassword(),
+                  onChanged: _validateConfirmPassword,
                   obscureText: !_isConfirmPasswordVisible,
                   suffix: IconButton(
-                    icon: Icon(
-                      _isConfirmPasswordVisible
-                          ? Icons.visibility
-                          : Icons.visibility_off,
-                      color: Colors.black,
+                    icon: SvgPicture.asset(
+                      'lib/core/assets/icons/eye.svg',
+                      colorFilter: ColorFilter.mode(
+                        _isConfirmPasswordVisible
+                            ? AppColors.darkGrey
+                            : Colors.black,
+                        BlendMode.srcIn,
+                      ),
                     ),
                     onPressed: () {
                       setState(() {
@@ -224,42 +227,6 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                     Row(
                       children: [
                         Icon(
-                          _hasNumber ? Icons.check : Icons.close,
-                          color: _hasNumber ? Colors.green : Colors.red,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'At least one number',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: _hasNumber ? Colors.grey : Colors.red,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          _hasSpecialChar ? Icons.check : Icons.close,
-                          color: _hasSpecialChar ? Colors.green : Colors.red,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'At least one special character (!, @, #, etc.)',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: _hasSpecialChar ? Colors.grey : Colors.red,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
                           _passwordsMatch ? Icons.check : Icons.close,
                           color: _passwordsMatch ? Colors.green : Colors.red,
                           size: 16,
@@ -274,14 +241,6 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'We recommend using uppercase, lowercase, numbers, and symbols for a stronger password',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.darkGrey,
-                      ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: AppLength.xl),
@@ -291,11 +250,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                   onPressed: _isLoading ? () {} : _handleResetPassword,
                   type: ButtonType.normal,
                   isFullWidth: true,
-                  isEnabled: _hasMinLength &&
-                      _hasNumber &&
-                      _hasSpecialChar &&
-                      _passwordsMatch &&
-                      !_isLoading,
+                  isEnabled: _hasMinLength && _passwordsMatch && !_isLoading,
                   isLoading: _isLoading,
                   color: ButtonColor.black,
                 ),

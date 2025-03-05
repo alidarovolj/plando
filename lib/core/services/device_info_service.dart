@@ -111,26 +111,21 @@ class DeviceInfoService {
       Position? position = await Geolocator.getLastKnownPosition();
 
       // Если последняя известная позиция недоступна, пробуем получить текущую
-      if (position == null) {
-        // Устанавливаем таймаут в 5 секунд, чтобы не блокировать запуск приложения
-        position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.low,
-          timeLimit: const Duration(seconds: 5),
-        ).catchError((e) {
-          debugPrint('Ошибка при получении текущей позиции: $e');
-          return null;
-        });
-      }
+      position ??= await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.low,
+        timeLimit: const Duration(seconds: 5),
+      ).catchError((e) {
+        debugPrint('Ошибка при получении текущей позиции: $e');
+        return null;
+      });
 
-      if (position != null) {
-        deviceData['latitude'] = position.latitude;
-        deviceData['longitude'] = position.longitude;
-        deviceData['location_accuracy'] = position.accuracy;
+      deviceData['latitude'] = position.latitude;
+      deviceData['longitude'] = position.longitude;
+      deviceData['location_accuracy'] = position.accuracy;
 
-        // Можно добавить дополнительную информацию о местоположении
-        // например, через обратное геокодирование получить город, страну и т.д.
-        // Но это требует дополнительных API и может занять время
-      }
+      // Можно добавить дополнительную информацию о местоположении
+      // например, через обратное геокодирование получить город, страну и т.д.
+      // Но это требует дополнительных API и может занять время
     } catch (e) {
       debugPrint('Ошибка при получении информации о местоположении: $e');
     }

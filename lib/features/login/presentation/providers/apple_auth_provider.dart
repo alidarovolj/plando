@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:plando/features/login/data/services/apple_auth_service.dart';
 import 'package:plando/core/providers/requests/auth/user.dart';
 
@@ -34,15 +33,10 @@ class AppleAuthNotifier
         print('Identity Token: ${credential.identityToken}');
         print('Authorization Code: ${credential.authorizationCode}');
 
-        if (credential.email == null || credential.email!.isEmpty) {
-          throw Exception(
-              'Email is required for authentication. Please ensure you share your email when signing in with Apple.');
-        }
-
         if (credential.identityToken != null) {
           // Return all necessary data for authentication
           state = AsyncValue.data({
-            'email': credential.email,
+            'email': credential.email ?? '',
             'userIdentifier': credential.userIdentifier,
             'identityToken': credential.identityToken,
             'authorizationCode': credential.authorizationCode,

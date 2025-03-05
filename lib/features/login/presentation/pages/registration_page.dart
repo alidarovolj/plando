@@ -4,6 +4,7 @@ import 'package:plando/core/styles/constants.dart';
 import 'package:plando/core/widgets/auth_app_bar.dart';
 import 'package:plando/core/widgets/custom_button.dart';
 import 'package:plando/core/widgets/custom_text_field.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class RegistrationPage extends StatefulWidget {
   final String email;
@@ -23,8 +24,6 @@ class _RegistrationPageState extends State<RegistrationPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _hasMinLength = false;
-  bool _hasNumber = false;
-  bool _hasSpecialChar = false;
   bool _isPasswordVisible = false;
 
   @override
@@ -43,17 +42,11 @@ class _RegistrationPageState extends State<RegistrationPage> {
   void _validatePassword(String value) {
     setState(() {
       _hasMinLength = value.length >= 8;
-      _hasNumber = RegExp(r'[0-9]').hasMatch(value);
-      _hasSpecialChar = RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(value);
     });
   }
 
   void _handleSignUp() {
-    if (_hasMinLength && _hasNumber && _hasSpecialChar) {
-      print('Passing OTP code to username page: ${widget.otpCode}');
-      print('OTP code type: ${widget.otpCode.runtimeType}');
-      print('OTP code length: ${widget.otpCode.length}');
-
+    if (_hasMinLength) {
       context.push('/username', extra: {
         'email': widget.email,
         'password': _passwordController.text,
@@ -66,13 +59,13 @@ class _RegistrationPageState extends State<RegistrationPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const AuthAppBar(),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppLength.body),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              const AuthAppBar(),
               const SizedBox(height: AppLength.xl),
               const CircleAvatar(
                 radius: 30,
@@ -89,8 +82,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
               const SizedBox(height: 50),
               CustomTextField(
                 controller: _emailController,
-                hintText: 'Email address',
-                labelText: 'Email address',
+                hintText: 'Email',
+                labelText: 'Email',
                 validationType: TextFieldValidationType.email,
                 onChanged: (_) {},
                 enabled: false,
@@ -104,11 +97,12 @@ class _RegistrationPageState extends State<RegistrationPage> {
                 onChanged: _validatePassword,
                 obscureText: !_isPasswordVisible,
                 suffix: IconButton(
-                  icon: Icon(
-                    _isPasswordVisible
-                        ? Icons.visibility
-                        : Icons.visibility_off,
-                    color: Colors.black,
+                  icon: SvgPicture.asset(
+                    'lib/core/assets/icons/eye.svg',
+                    colorFilter: ColorFilter.mode(
+                      _isPasswordVisible ? AppColors.darkGrey : Colors.black,
+                      BlendMode.srcIn,
+                    ),
                   ),
                   onPressed: () {
                     setState(() {
@@ -138,50 +132,6 @@ class _RegistrationPageState extends State<RegistrationPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        _hasNumber ? Icons.check : Icons.close,
-                        color: _hasNumber ? Colors.green : Colors.red,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'At least one number',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: _hasNumber ? Colors.grey : Colors.red,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        _hasSpecialChar ? Icons.check : Icons.close,
-                        color: _hasSpecialChar ? Colors.green : Colors.red,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'At least one special character (!, @, #, etc.)',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: _hasSpecialChar ? Colors.grey : Colors.red,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'We recommend using uppercase, lowercase, numbers, and symbols for a stronger password',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.darkGrey,
-                    ),
-                  ),
                 ],
               ),
               const SizedBox(height: AppLength.xl),
@@ -190,7 +140,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                 onPressed: _handleSignUp,
                 type: ButtonType.normal,
                 isFullWidth: true,
-                isEnabled: _hasMinLength && _hasNumber && _hasSpecialChar,
+                isEnabled: _hasMinLength,
                 color: ButtonColor.black,
               ),
             ],

@@ -8,8 +8,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:plando/core/services/analytics_service.dart';
 import 'package:plando/core/providers/auth/auth_state.dart';
 import 'package:amplitude_flutter/amplitude.dart';
-import 'package:flutter/foundation.dart';
-import 'dart:io' show Platform;
 import 'package:plando/core/services/device_info_service.dart';
 
 void main() async {

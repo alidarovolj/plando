@@ -150,13 +150,13 @@ class _KnownLoginPageState extends ConsumerState<KnownLoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const AuthAppBar(),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppLength.body),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              const AuthAppBar(),
               const SizedBox(height: AppLength.xl),
               const CircleAvatar(
                 radius: 30,

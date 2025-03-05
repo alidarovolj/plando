@@ -8,9 +8,9 @@ class LocationInfoWidget extends ConsumerWidget {
   final VoidCallback? onLocationReceived;
 
   const LocationInfoWidget({
-    Key? key,
+    super.key,
     this.onLocationReceived,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

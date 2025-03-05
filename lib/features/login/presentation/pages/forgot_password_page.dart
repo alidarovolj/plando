@@ -128,12 +128,12 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const AuthAppBar(),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppLength.body),
           child: Column(
             children: [
+              const AuthAppBar(),
               const SizedBox(height: 60),
               const Text(
                 'Enter your email, and we\'ll send you a reset code',
